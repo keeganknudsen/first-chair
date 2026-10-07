@@ -147,3 +147,21 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Local env files (keep .env.example committed)
+.env*.local
+!.env.example
+
+# OS and editor
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Docker volumes / local DB data
+pgdata/
+
+# Test output
+coverage/
+playwright-report/
+test-results/
