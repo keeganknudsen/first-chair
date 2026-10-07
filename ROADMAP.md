@@ -10,8 +10,8 @@ Check items off in the same commit that completes them.
 
 **Goal:** Get a request flowing from browser to database and back, live on the internet.
 
-- [ ] Create the repo with `/client` and `/server` folders, `.gitignore`, and a README stub
-- [ ] Scaffold the client with Vite, React, and TypeScript
+- [x] Create the repo with `/client` and `/server` folders, `.gitignore`, and a README stub
+- [x] Scaffold the client with Vite, React, and TypeScript
 - [ ] Scaffold the server with Express and TypeScript, add `GET /health` returning `{ ok: true }`
 - [ ] Run Postgres locally with `docker-compose.yml`
 - [ ] Connect the server to Postgres with `node-postgres`; `/health` also reports whether the DB answered
