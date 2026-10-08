@@ -15,7 +15,7 @@ Check items off in the same commit that completes them.
 - [x] Scaffold the server with Express and TypeScript, add `GET /health` returning `{ ok: true }`
 - [x] Run Postgres locally with `docker-compose.yml`
 - [x] Connect the server to Postgres with `node-postgres`; `/health` also reports whether the DB answered
-- [ ] Fetch `/health` from the client and show the status; set up CORS and `.env` files for both apps
+- [x] Fetch `/health` from the client and show the status; set up CORS and `.env` files for both apps
 - [ ] Add `.env.example` files with variable names and fake values
 - [ ] Deploy the database (Neon), API (Render), and client (Vercel); done when production shows a healthy status
 - [ ] README: write "How a request flows" (browser → API → DB → back) in your own words
