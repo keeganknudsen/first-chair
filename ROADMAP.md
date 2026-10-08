@@ -13,7 +13,7 @@ Check items off in the same commit that completes them.
 - [x] Create the repo with `/client` and `/server` folders, `.gitignore`, and a README stub
 - [x] Scaffold the client with Vite, React, and TypeScript
 - [x] Scaffold the server with Express and TypeScript, add `GET /health` returning `{ ok: true }`
-- [ ] Run Postgres locally with `docker-compose.yml`
+- [x] Run Postgres locally with `docker-compose.yml`
 - [ ] Connect the server to Postgres with `node-postgres`; `/health` also reports whether the DB answered
 - [ ] Fetch `/health` from the client and show the status; set up CORS and `.env` files for both apps
 - [ ] Add `.env.example` files with variable names and fake values
