@@ -1,6 +1,7 @@
-import express from 'express'
+import express, { ErrorRequestHandler } from 'express'
 import cors from 'cors'
 import { pool } from './db.js'
+import { postsRouter } from './routes/posts.js'
 
 const clientOrigin = process.env.CLIENT_ORIGIN
 
@@ -24,3 +25,12 @@ app.get('/health', async (_req, res) => {
     res.status(503).json({ ok: false, db: 'down' })
   }
 })
+
+app.use('/api/posts', postsRouter)
+
+const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
+  console.error(err)
+  res.status(500).json({ error: 'Internal server error' })
+}
+
+app.use(errorHandler)
