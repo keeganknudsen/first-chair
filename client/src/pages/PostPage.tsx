@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router'
+import Markdown from 'react-markdown'
 import { formatDate, getPost, type Post } from '../api'
 
 type State = 
@@ -51,7 +52,9 @@ export function PostPage() {
             <Link to="/">Back to all posts</Link>
             <h2>{post.title}</h2>
             <p>{formatDate(post.createdAt)}</p>
-            <div style={{ whiteSpace: 'pre-wrap' }}>{post.bodyMd}</div>
+            <div className="post-body">
+                <Markdown>{post.bodyMd}</Markdown>
+            </div>
         </article>
     )
 }

@@ -109,3 +109,23 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+
+main {
+    max-width: 65ch;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+  }
+
+.post-body {
+  max-width: 65ch;
+  line-height: 1.7;
+  text-align: left;
+}
+
+.post-body h2 {
+  margin-top: 2rem;
+}
+
+.post-body ul {
+  padding-left: 1.5rem;
+}
