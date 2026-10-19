@@ -27,7 +27,7 @@ Check items off in the same commit that completes them.
 - [x] Write the first migration: `posts` table (`id`, `title`, unique `slug`, `body_md`, `created_at`, `updated_at`)
 - [x] Seed 3–5 real trip reports
 - [x] Build `GET /api/posts` and `GET /api/posts/:slug` with raw SQL
-- [ ] Add React Router with a post list page and a `/posts/:slug` page
+- [x] Add React Router with a post list page and a `/posts/:slug` page
 - [ ] Render Markdown safely with `react-markdown` (raw HTML disabled)
 - [ ] Return a 404 for unknown slugs in both the API and the UI
 - [ ] README: write "Why this schema"
