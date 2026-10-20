@@ -29,7 +29,7 @@ Check items off in the same commit that completes them.
 - [x] Build `GET /api/posts` and `GET /api/posts/:slug` with raw SQL
 - [x] Add React Router with a post list page and a `/posts/:slug` page
 - [x] Render Markdown safely with `react-markdown` (raw HTML disabled)
-- [ ] Return a 404 for unknown slugs in both the API and the UI
+- [x] Return a 404 for unknown slugs in both the API and the UI
 - [ ] README: write "Why this schema"
 
 ## 🟦 v2: Full CRUD

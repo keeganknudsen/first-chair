@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import Markdown from 'react-markdown'
 import { formatDate, getPost, type Post } from '../api'
+import { NotFound } from '../components/NotFound'
 
 type State = 
     | { state: 'loading' }
@@ -38,7 +39,7 @@ export function PostPage() {
     }
 
     if (status.state == 'not-found') {
-        return <p>That post doesn't exist.</p>
+        return <NotFound message="That post doesn't exist." />
     }
 
     if (status.state === 'error') {
