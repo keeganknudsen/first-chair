@@ -30,7 +30,7 @@ Check items off in the same commit that completes them.
 - [x] Add React Router with a post list page and a `/posts/:slug` page
 - [x] Render Markdown safely with `react-markdown` (raw HTML disabled)
 - [x] Return a 404 for unknown slugs in both the API and the UI
-- [ ] README: write "Why this schema"
+- [x] README: write "Why this schema"
 
 ## 🟦 v2: Full CRUD
 
