@@ -1,6 +1,8 @@
-import { RequestHandler, Router } from 'express'
+import { Router, type RequestHandler, type Response } from 'express'
+import { z } from 'zod'
 import { pgErrorCode, pool } from '../db.js'
-import { pathToFileURL } from 'node:url';
+import { createPostSchema, updatePostSchema } from '../schemas/post.js'
+
 
 export const postsRouter = Router()
 
@@ -32,8 +34,24 @@ const requireWritesEnabled: RequestHandler = (_req, res, next) => {
     next()
 }
 
-function isNonEmptyString(value: unknown): value is string {
-    return typeof value === 'string' && value.trim().length > 0
+function sendValidationError(res: Response, error: z.ZodError) {
+    res.status(400).json({
+        error: 'Invalid request',
+        fields: z.flattenError(error).fieldErrors,
+    })
+}
+
+function handleWriteError(err: unknown, res: Response): boolean {
+    const code = pgErrorCode(err)
+    if (code === '23505') {
+        res.status(409).json({ error: 'A post with that slug already exists' })
+        return true
+    }
+    if (code === '23514') {
+        res.status(400).json({ error: 'Glug must be lowercase letters, numbers, and hyphens'})
+        return true
+    }
+    return false
 }
 
 postsRouter.get('/', async (_req, res) => {
@@ -60,12 +78,12 @@ postsRouter.get('/:slug', async (req, res) => {
 })
 
 postsRouter.post('/', requireWritesEnabled, async (req, res) => {
-    const { title, slug, bodyMd } = req.body ?? {}
-
-    if(!isNonEmptyString(title) || !isNonEmptyString(slug) || !isNonEmptyString(bodyMd)) {
-        res.status(400).json({ error: 'title, slug, and bodyMd are required'})
+    const parsed = createPostSchema.safeParse(req.body)
+    if (!parsed.success) {
+        sendValidationError(res, parsed.error)
         return
     }
+    const { title, slug, bodyMd } = parsed.data
 
     try {
         const { rows } = await pool.query<Post>(
@@ -77,32 +95,19 @@ postsRouter.post('/', requireWritesEnabled, async (req, res) => {
         const post = rows[0]
         res.status(201).location(`/api/posts/${post.slug}`).json({ post })
     } catch (err) {
-        const code = pgErrorCode(err)
-        if (code === '23505') {
-            res.status(409).json({ error: 'A post with that slug already exists' })
-            return
+        if (!handleWriteError(err, res)) {
+            throw err
         }
-        if (code === '23514') {
-            res.status(400).json({ error: 'Glug must be lowercase letters, numbers, and hyphens'})
-            return
-        }
-        throw err
     }
 })
 
 postsRouter.patch('/:slug', requireWritesEnabled, async (req, res) => {
-    const { title, slug, bodyMd } = req.body ?? {}
-    const fields = { title, slug, bodyMd }
-
-    const provided = Object.values(fields).filter((value) => value !== undefined)
-    if (provided.length === 0) {
-        res.status(400).json({ error: 'Provide at least one of title, slug, or bodyMd'})
+    const parsed = updatePostSchema.safeParse(req.body)
+    if (!parsed.success) {
+        sendValidationError(res, parsed.error)
         return
     }
-    if (provided.some((value) => !isNonEmptyString(value))) {
-        res.status(400).json({ error: 'Fields must be non-empty strings' })
-        return
-    }
+    const { title, slug, bodyMd } = parsed.data
 
     try {
         const { rows } = await pool.query<Post>(
@@ -122,16 +127,9 @@ postsRouter.patch('/:slug', requireWritesEnabled, async (req, res) => {
         }
         res.json({ post })
     } catch (err) {
-        const code = pgErrorCode(err)
-        if (code === '23505') {
-            res.status(409).json({ error: 'A post with that slug already exists' })
-            return
+        if (!handleWriteError(err, res)) {
+            throw err
         }
-        if (code === '23514') {
-            res.status(400).json({ error: 'Glug must be lowercase letters, numbers, and hyphens'})
-            return
-        }
-        throw err
     }
 })
 
