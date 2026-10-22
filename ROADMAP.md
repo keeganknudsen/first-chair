@@ -37,7 +37,7 @@ Check items off in the same commit that completes them.
 **Goal:** Write, edit, and delete posts from the browser with validation you can trust.
 
 - [x] Add `POST`, `PATCH`, and `DELETE /api/posts` with correct status codes (201, 204, 400, 404)
-- [ ] Share Zod schemas between client and server; validate on both sides
+- [x] Share Zod schemas between client and server; validate on both sides
 - [ ] Build a post editor with a live Markdown preview
 - [ ] Add loading, error, and empty states to every page
 - [ ] Generate unique slugs from titles and handle collisions

@@ -21,3 +21,26 @@ export const updatePostSchema = createPostSchema
 
 export type CreatePostInput = z.infer<typeof createPostSchema>
 export type UpdatePostInput = z.infer<typeof updatePostSchema>
+
+export const postSummarySchema = z.object({
+    id: z.string(),
+    title: z.string(),
+    slug: z.string(),
+    createdAt: z.iso.datetime(),
+    updatedAt: z.iso.datetime(),
+})
+
+export const postSchema = postSummarySchema.extend({
+    bodyMd: z.string(),
+})
+
+export const postListResponseSchema = z.object({
+    posts: z.array(postSummarySchema),
+})
+
+export const postResponseSchema = z.object({
+    post: postSchema,
+})
+
+export type PostSummary = z.infer<typeof postSummarySchema>
+export type Post = z.infer<typeof postSchema>

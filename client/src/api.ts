@@ -1,23 +1,21 @@
+import {
+    postListResponseSchema,
+    postResponseSchema,
+    type Post,
+    type PostSummary,
+} from '@first-chair/shared'
+
+
 const API_URL = import.meta.env.VITE_API_URL
 
-export type PostSummary = {
-    id: string
-    title: string
-    slug: string
-    createdAt: string
-    updatedAt: string
-}
-
-export type Post = PostSummary & {
-    bodyMd: string
-}
+export type { Post, PostSummary }
 
 export async function getPosts(signal?: AbortSignal): Promise<PostSummary[]> {
     const res = await fetch(`${API_URL}/api/posts`, { signal })
     if (!res.ok) {
         throw new Error(`Request failed: ${res.status}`)
     }
-    const data = (await res.json()) as { posts: PostSummary[] }
+    const data = postListResponseSchema.parse(await res.json())
     return data.posts
 }
 
@@ -29,7 +27,7 @@ export async function getPost(slug: string, signal?: AbortSignal): Promise<Post 
     if (!res.ok) {
         throw new Error(`Request failed: ${res.status}`)
     }
-    const data = (await res.json()) as { post: Post }
+    const data = postResponseSchema.parse(await res.json())
     return data.post
 }
 

@@ -28,8 +28,10 @@ A fullstack ski trip blog. I'm building it to **learn fullstack development**, s
 
 ```
 /client          React app
-/server          Express API
+/server          Express API                 
 /server/migrations  SQL migrations
+/shared             Code used by both client and server (@first-chair/shared)
+/shared/src         Zod schemas and inferred types
 docker-compose.yml  Local Postgres
 ROADMAP.md       Phased plan and checklist
 CLAUDE.md        This file
@@ -39,10 +41,19 @@ Folders appear as phases need them; not all exist yet.
 
 ## Commands
 
+Run everything from the repo root unless noted.
+
 ```bash
-docker compose up -d        # start Postgres
-cd server && npm run dev    # API on http://localhost:3000
-cd client && npm run dev    # client on http://localhost:5173
+docker compose up -d                      # start Postgres
+npm install                               # install all workspaces
+npm install <pkg> -w client               # add a dependency to one workspace
+npm run dev -w server                     # API on http://localhost:3000
+npm run dev -w client                     # client on http://localhost:5173
+npm run dev -w @first-chair/shared        # rebuild shared on save (when editing schemas)
+npm run build -w server                   # build server (builds shared first)
+npm run build -w client                   # build client (builds shared first)
+npm run migrate -w server                 # apply database migrations
+npm run seed -w server                    # seed posts
 ```
 
 Update this section if the scripts change.
@@ -55,6 +66,10 @@ Update this section if the scripts change.
 - Every schema change goes through a migration file, never manual edits to the database.
 - Validate all input on the server, even when the client validates too.
 - Small commits with clear messages in the imperative ("Add posts migration").
+- Install dependencies from the repo root with `-w <workspace>`. Never run `npm install` in a folder without a `package.json`.
+- Request and response shapes live in `shared` as Zod schemas. Derive types with `z.infer` instead of writing them by hand.
+- The server validates request bodies with `safeParse`; the client validates API responses with `parse`.
+- `shared` is compiled; `predev` and `prebuild` rebuild it, but running dev servers need a rebuild to see schema changes.
 
 ## Security rules
 

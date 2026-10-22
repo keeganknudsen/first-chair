@@ -7,9 +7,12 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "predev": "npm run build --prefix ../shared",
+    "prebuild": "npm run build --prefix ../shared"
   },
   "dependencies": {
+    "@first-chair/shared": "^0.0.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-markdown": "^10.1.0",

@@ -1,7 +1,7 @@
 import { Router, type RequestHandler, type Response } from 'express'
 import { z } from 'zod'
 import { pgErrorCode, pool } from '../db.js'
-import { createPostSchema, updatePostSchema } from '../schemas/post.js'
+import { createPostSchema, updatePostSchema } from '@first-chair/shared'
 
 
 export const postsRouter = Router()
