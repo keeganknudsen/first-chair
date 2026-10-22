@@ -33,8 +33,15 @@ app.use((_req, res) => {
 })
 
 const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
-  console.error(err)
-  res.status(500).json({ error: 'Internal server error' })
+  const status = typeof err.status === 'number' ? err.status : 500
+
+  if (status >= 500) {
+    console.error(err)
+    res.status(500).json({ error: 'Internal server error' })
+    return
+  }
+
+  res.status(status).json({ error: 'Bad request' })
 }
 
 app.use(errorHandler)
