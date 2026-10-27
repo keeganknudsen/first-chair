@@ -1,8 +1,10 @@
 import {
     postListResponseSchema,
     postResponseSchema,
+    type CreatePostInput,
     type Post,
     type PostSummary,
+    type UpdatePostInput,
 } from '@first-chair/shared'
 
 
@@ -38,4 +40,42 @@ export function formatDate(iso: string): string {
         day : 'numeric',
         timeZone: 'UTC',
     })
+}
+
+export type FieldErrors = Partial<Record<keyof CreatePostInput, string[]>>
+
+export class ApiError extends Error {
+    status: number
+    fields: FieldErrors
+
+    constructor(status: number, message: string, fields: FieldErrors = {}) {
+        super(message)
+        this.status = status
+        this.fields = fields
+    }
+}
+
+async function sendPost(url: string, method: 'POST' | 'PATCH', body: unknown): Promise<Post> {
+    const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    })
+
+    const data: unknown = await res.json().catch(() => null)
+
+    if (!res.ok) {
+        const err = data as { error?: string; fields?: FieldErrors } | null
+        throw new ApiError(res.status, err?.error ?? `Request failed: ${res.status}`, err?.fields ?? {})
+    }
+
+    return postResponseSchema.parse(data).post
+}
+
+export function createPost(input: CreatePostInput): Promise<Post> {
+    return sendPost(`${API_URL}/api/posts`, 'POST', input)
+}
+
+export function updatePost(slug: string, input: UpdatePostInput): Promise<Post> {
+    return sendPost(`${API_URL}/api/posts/${encodeURIComponent(slug)}`, 'PATCH', input)
 }

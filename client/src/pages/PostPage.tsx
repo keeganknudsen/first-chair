@@ -52,6 +52,7 @@ export function PostPage() {
         <article>
             <Link to="/">Back to all posts</Link>
             <h2>{post.title}</h2>
+            {import.meta.env.DEV && <Link to={`/posts/${post.slug}/edit`}>Edit</Link>}
             <p>{formatDate(post.createdAt)}</p>
             <div className="post-body">
                 <Markdown>{post.bodyMd}</Markdown>
