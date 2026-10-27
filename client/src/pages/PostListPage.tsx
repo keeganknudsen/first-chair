@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { formatDate, getPosts, type PostSummary } from '../api'
+import { Loading } from '../components/Loading'
+import { ErrorMessage } from '../components/ErrorMessage'
 
 type State = 
     | { state: 'loading' }
@@ -9,6 +11,7 @@ type State =
 
 export function PostListPage() {
     const [status, setStatus] = useState<State>({ state: 'loading' })
+    const [attempt, setAttempt] = useState(0)
 
     useEffect(() => {
         const controller = new AbortController()
@@ -22,14 +25,28 @@ export function PostListPage() {
             })
         
             return () => controller.abort()
-    }, [])
+    }, [attempt])
+
+    function retry() {
+        setStatus({ state: 'loading' })
+        setAttempt((n) => n + 1)
+    }
 
     if (status.state === 'loading') {
-        return <p>Loading posts...</p>
+        return <Loading message="Loading posts..." />
     }
 
     if (status.state === 'error') {
-        return <p>Couldn't load posts.</p>
+        return <ErrorMessage message="Couldn't load posts." onRetry={retry} />
+    }
+
+    if (status.posts.length === 0) {
+        return (
+            <div>
+                <p>No posts yet.</p>
+                {import.meta.env.DEV && <Link to="/new">Write the first post</Link>}
+            </div>
+        )
     }
 
     return (

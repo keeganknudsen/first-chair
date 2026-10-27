@@ -39,7 +39,7 @@ Check items off in the same commit that completes them.
 - [x] Add `POST`, `PATCH`, and `DELETE /api/posts` with correct status codes (201, 204, 400, 404)
 - [x] Share Zod schemas between client and server; validate on both sides
 - [x] Build a post editor with a live Markdown preview
-- [ ] Add loading, error, and empty states to every page
+- [x] Add loading, error, and empty states to every page
 - [ ] Generate unique slugs from titles and handle collisions
 - [ ] Move queries to Drizzle and compare the generated SQL with your raw SQL
 - [ ] README: write "Validation and error handling"

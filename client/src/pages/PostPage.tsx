@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import Markdown from 'react-markdown'
 import { formatDate, getPost, type Post } from '../api'
-import { NotFound } from '../components/NotFound'
+import { ErrorMessage } from '../components/ErrorMessage'
+import { Loading } from '../components/Loading'
 
 type State = 
     | { state: 'loading' }
@@ -13,6 +14,7 @@ type State =
 export function PostPage() {
     const { slug } = useParams<{ slug: string }>()
     const [status, setStatus] = useState<State>({ state: 'loading'})
+    const [attempt, setAttempt] = useState(0)
 
     useEffect(() => {
         if (!slug) {
@@ -32,14 +34,19 @@ export function PostPage() {
             })
         
             return () => controller.abort()
-    }, [slug])
+    }, [slug, attempt])
+
+    function retry() {
+        setStatus({ state: 'loading' })
+        setAttempt((n) => n + 1)
+    }
 
     if (status.state === 'loading') {
-        return <p>Loading posts...</p>
+        return <Loading />
     }
 
     if (status.state == 'not-found') {
-        return <NotFound message="That post doesn't exist." />
+        return <ErrorMessage message="Couldn't load this post." onRetry={retry} />
     }
 
     if (status.state === 'error') {
