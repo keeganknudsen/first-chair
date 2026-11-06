@@ -1,7 +1,12 @@
 import { Router, type RequestHandler, type Response } from 'express'
 import { z } from 'zod'
 import { pgErrorCode, pool } from '../db.js'
-import { createPostSchema, updatePostSchema } from '@first-chair/shared'
+import { 
+    createPostSchema,
+    slugify,
+    SLUG_MAX_LENGTH, 
+    updatePostSchema 
+} from '@first-chair/shared'
 
 
 export const postsRouter = Router()
@@ -54,6 +59,21 @@ function handleWriteError(err: unknown, res: Response): boolean {
     return false
 }
 
+async function insertPost(title: string, slug: string, bodyMd: string): Promise<Post> {
+    const { rows } = await pool.query<Post>(
+        `INSERT INTO posts (title, slug, body_md)
+         VALUES ($1, $2, $3)
+         RETURNING ${postColums}`,
+        [title, slug, bodyMd],
+    )
+    return rows[0]
+}
+
+function withSuffix(base: string, n: number): string {
+    const suffix = `-${n}`
+    return base.slice(0, SLUG_MAX_LENGTH - suffix.length).replace(/-+$/, '') + suffix
+}
+
 postsRouter.get('/', async (_req, res) => {
     const { rows } = await pool.query<PostSummary>(
         `SELECT ${summaryColumns} FROM posts ORDER BY created_at DESC`,
@@ -77,6 +97,8 @@ postsRouter.get('/:slug', async (req, res) => {
     res.json({ post })
 })
 
+const MAX_SLUG_ATTEMPTS = 20
+
 postsRouter.post('/', requireWritesEnabled, async (req, res) => {
     const parsed = createPostSchema.safeParse(req.body)
     if (!parsed.success) {
@@ -85,20 +107,36 @@ postsRouter.post('/', requireWritesEnabled, async (req, res) => {
     }
     const { title, slug, bodyMd } = parsed.data
 
-    try {
-        const { rows } = await pool.query<Post>(
-            `INSERT INTO posts (title, slug, body_md)
-             VALUES ($1, $2, $3)
-             RETURNING ${postColums}`,
-            [title, slug, bodyMd],
-        )
-        const post = rows[0]
-        res.status(201).location(`/api/posts/${post.slug}`).json({ post })
-    } catch (err) {
-        if (!handleWriteError(err, res)) {
-            throw err
+    if (slug) {
+        try {
+            const post = await insertPost(title, slug, bodyMd)
+            res.status(201).location(`/api/posts/${post.slug}`).json({ post })
+        } catch (err) {
+            if (!handleWriteError(err, res)) throw err
+        }
+        return
+    }
+
+    const base = slugify(title) || 'post'
+
+    for (let n = 1; n <= MAX_SLUG_ATTEMPTS; n++) {
+        const candidate = n === 1 ? base : withSuffix(base, n)
+        try {
+            const post = await insertPost(title, candidate, bodyMd)
+            res.status(201).location(`/api/posts/${post.slug}`).json({ post })
+            return
+        } catch (err) {
+            if (pgErrorCode(err) === '23505') {
+                continue
+            }
+            if (!handleWriteError(err, res)) {
+                throw err
+            }
+            return
         }
     }
+
+    res.status(409).json({ error: 'Could not find a free slug for that title' })
 })
 
 postsRouter.patch('/:slug', requireWritesEnabled, async (req, res) => {

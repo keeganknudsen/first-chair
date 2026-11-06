@@ -1,33 +1,59 @@
-import { useState, type SubmitEvent } from 'react'
+import { useState, type ChangeEvent, type SubmitEvent } from 'react'
 import Markdown from 'react-markdown'
 import { z } from 'zod'
-import { createPostSchema, type CreatePostInput } from '@first-chair/shared'
+import { createPostSchema, type CreatePostInput, slugify } from '@first-chair/shared'
 import { ApiError, type FieldErrors } from '../api'
 
-type Props = {
-    initial?: CreatePostInput
-    submitLabel: string
-    onSubmit: (inpit: CreatePostInput) => Promise<void>
+type FormValues = {
+  title: string
+  slug: string
+  bodyMd: string
 }
 
-const empty: CreatePostInput = { title: '', slug: '', bodyMd: '' }
+type Props = {
+  initial?: FormValues
+  submitLabel: string
+  onSubmit: (inpit: CreatePostInput) => Promise<void>
+}
+
+const empty: FormValues = { title: '', slug: '', bodyMd: '' }
 
 export function PostForm({ initial = empty, submitLabel, onSubmit }: Props) {
-    const [values, setValues] = useState<CreatePostInput>(initial)
+    const [values, setValues] = useState<FormValues>(initial)
+    const [slugTouched, setSlugTouched] = useState(initial.slug !== '')
     const [errors, setErrors] = useState<FieldErrors>({})
     const [formError, setFormError] = useState<string | null>(null)
     const [submitting, setSubmitting] = useState(false)
 
-    function update(field: keyof CreatePostInput) {
-        return (e: { target: { value: string } }) =>
-            setValues((prev) => ({ ...prev, [field]: e.target.value }))
+    function handleTitleChange(e: ChangeEvent<HTMLInputElement>) {
+      const title = e.target.value
+      setValues((prev) => ({
+        ...prev,
+        title,
+        slug: slugTouched ? prev.slug : slugify(title),
+      }))
+    }
+
+    function handleSlugChange(e: ChangeEvent<HTMLInputElement>) {
+      setSlugTouched(true)
+      setValues((prev) => ({ ...prev, slug: e.target.value }))
+    }
+
+    function handleBodyChange(e: ChangeEvent<HTMLTextAreaElement>) {
+      setValues((prev) => ({ ...prev, bodyMd: e.target.value }))
     }
 
     async function handleSubmit(e: SubmitEvent<HTMLFormElement>) {
         e.preventDefault()
         setFormError(null)
 
-        const parsed = createPostSchema.safeParse(values)
+        const input = {
+          title: values.title,
+          bodyMd: values.title,
+          slug: slugTouched && values.slug.trim() ? values.slug : undefined,
+        }
+
+        const parsed = createPostSchema.safeParse(input)
         if (!parsed.success) {
             setErrors(z.flattenError(parsed.error).fieldErrors)
             return
@@ -57,19 +83,19 @@ export function PostForm({ initial = empty, submitLabel, onSubmit }: Props) {
     <form onSubmit={handleSubmit} className="post-form" noValidate>
       <label>
         Title
-        <input value={values.title} onChange={update('title')} />
+        <input value={values.title} onChange={handleTitleChange} />
       </label>
       {errors.title && <p className="field-error">{errors.title[0]}</p>}
 
       <label>
         Slug
-        <input value={values.slug} onChange={update('slug')} placeholder="powder-day" />
+        <input value={values.slug} onChange={handleSlugChange} placeholder="generated from title" />
       </label>
       {errors.slug && <p className="field-error">{errors.slug[0]}</p>}
 
       <label>
         Body (Markdown)
-        <textarea value={values.bodyMd} onChange={update('bodyMd')} rows={16} />
+        <textarea value={values.bodyMd} onChange={handleBodyChange} rows={16} />
       </label>
       {errors.bodyMd && <p className="field-error">{errors.bodyMd[0]}</p>}
 
