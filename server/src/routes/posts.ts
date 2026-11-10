@@ -1,6 +1,8 @@
 import { Router, type RequestHandler, type Response } from 'express'
 import { z } from 'zod'
-import { pgErrorCode, pool } from '../db.js'
+import { desc, eq, sql } from 'drizzle-orm'
+import { db, pgErrorCode} from '../db.js'
+import { posts, type PostRow } from '../schema.js'
 import { 
     createPostSchema,
     slugify,
@@ -11,25 +13,13 @@ import {
 
 export const postsRouter = Router()
 
-type PostSummary = {
-    id: string
-    title: string
-    slug: string
-    createdAt: Date
-    updatedAt: Date
+const summaryFields = {
+    id: posts.id,
+    title: posts.title,
+    slug: posts.slug,
+    createdAt: posts.createdAt,
+    updatedAt: posts.updatedAt,
 }
-
-type Post = PostSummary & {
-    bodyMd: string
-}
-
-const summaryColumns = `
-    id, title, slug,
-    created_at AS "createdAt",
-    updated_at AS "updatedAt"
-`
-
-const postColums = `${summaryColumns}, body_md AS "bodyMd"`
 
 const requireWritesEnabled: RequestHandler = (_req, res, next) => {
     if (process.env.ENABLE_WRITES !== 'true') {
@@ -59,14 +49,9 @@ function handleWriteError(err: unknown, res: Response): boolean {
     return false
 }
 
-async function insertPost(title: string, slug: string, bodyMd: string): Promise<Post> {
-    const { rows } = await pool.query<Post>(
-        `INSERT INTO posts (title, slug, body_md)
-         VALUES ($1, $2, $3)
-         RETURNING ${postColums}`,
-        [title, slug, bodyMd],
-    )
-    return rows[0]
+async function insertPost(title: string, slug: string, bodyMd: string): Promise<PostRow> {
+    const [post] = await db.insert(posts).values({ title, slug, bodyMd }).returning()
+    return post
 }
 
 function withSuffix(base: string, n: number): string {
@@ -75,19 +60,19 @@ function withSuffix(base: string, n: number): string {
 }
 
 postsRouter.get('/', async (_req, res) => {
-    const { rows } = await pool.query<PostSummary>(
-        `SELECT ${summaryColumns} FROM posts ORDER BY created_at DESC`,
-    )
+    const rows = await db
+        .select(summaryFields)
+        .from(posts)
+        .orderBy(desc(posts.createdAt))
     res.json({ posts: rows })
 })
 
 postsRouter.get('/:slug', async (req, res) => {
-    const { rows } = await pool.query<Post>(
-        `SELECT ${postColums} FROM posts WHERE slug = $1`,
-        [req.params.slug],
-    )
-
-    const post = rows[0]
+    const [post] = await db
+        .select()
+        .from(posts)
+        .where(eq(posts.slug, req.params.slug))
+        .limit(1)
 
     if (!post) {
         res.status(404).json({ error: 'Post not found' })
@@ -139,7 +124,7 @@ postsRouter.post('/', requireWritesEnabled, async (req, res) => {
     res.status(409).json({ error: 'Could not find a free slug for that title' })
 })
 
-postsRouter.patch('/:slug', requireWritesEnabled, async (req, res) => {
+postsRouter.patch<{ slug: string }>('/:slug', requireWritesEnabled, async (req, res) => {
     const parsed = updatePostSchema.safeParse(req.body)
     if (!parsed.success) {
         sendValidationError(res, parsed.error)
@@ -148,17 +133,12 @@ postsRouter.patch('/:slug', requireWritesEnabled, async (req, res) => {
     const { title, slug, bodyMd } = parsed.data
 
     try {
-        const { rows } = await pool.query<Post>(
-            `UPDATE posts
-             SET title = COALESCE($1, title),
-                 slug = COALESCE($2, slug),
-                 body_md = COALESCE($3, body_md),
-                 updated_at = now()
-             WHERE slug = $4
-             RETURNING ${postColums}`,
-            [title, slug, bodyMd, req.params.slug],
-        )
-        const post = rows[0]
+        const [post] = await db
+            .update(posts)
+            .set({ title, slug, bodyMd, updatedAt: sql`now()` })
+            .where(eq(posts.slug, req.params.slug))
+            .returning()
+
         if(!post) {
             res.status(404).json({ error: 'Post not found' })
             return
@@ -171,9 +151,13 @@ postsRouter.patch('/:slug', requireWritesEnabled, async (req, res) => {
     }
 })
 
-postsRouter.delete('/:slug', requireWritesEnabled, async (req, res) => {
-    const result = await pool.query('DELETE FROM posts WHERE slug = $1', [req.params.slug])
-    if (result.rowCount === 0) {
+postsRouter.delete<{ slug: string }>('/:slug', requireWritesEnabled, async (req, res) => {
+    const deleted = await db
+        .delete(posts)
+        .where(eq(posts.slug, req.params.slug))
+        .returning({ id: posts.id })
+
+    if (deleted.length === 0) {
         res.status(404).json({ error: 'Post not found' })
         return
     }

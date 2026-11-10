@@ -23,6 +23,7 @@
   "dependencies": {
     "@first-chair/shared": "^0.0.0",
     "cors": "^2.8.6",
+    "drizzle-orm": "^0.45.4",
     "express": "^5.2.1",
     "pg": "^8.23.1",
     "zod": "^4.6.7"

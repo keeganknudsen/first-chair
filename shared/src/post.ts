@@ -24,7 +24,7 @@ export type CreatePostInput = z.infer<typeof createPostSchema>
 export type UpdatePostInput = z.infer<typeof updatePostSchema>
 
 export const postSummarySchema = z.object({
-    id: z.string(),
+    id: z.number(),
     title: z.string(),
     slug: z.string(),
     createdAt: z.iso.datetime(),

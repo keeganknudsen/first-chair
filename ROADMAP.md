@@ -41,7 +41,7 @@ Check items off in the same commit that completes them.
 - [x] Build a post editor with a live Markdown preview
 - [x] Add loading, error, and empty states to every page
 - [x] Generate unique slugs from titles and handle collisions
-- [ ] Move queries to Drizzle and compare the generated SQL with your raw SQL
+- [x] Move queries to Drizzle and compare the generated SQL with your raw SQL
 - [ ] README: write "Validation and error handling"
 
 ## 🟦 v3: Authentication and authorization
