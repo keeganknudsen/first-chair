@@ -20,6 +20,7 @@ export function PostListPage() {
             .then((posts) => setStatus({ state: 'loaded', posts }))
             .catch((err) => {
                 if (err.name !== 'AbortError') {
+                    console.error(err)
                     setStatus({ state: 'error'})
                 }
             })

@@ -29,6 +29,7 @@ export function PostPage() {
             )
             .catch((err) => {
                 if (err.name !== 'AbortError') {
+                    console.error(err)
                     setStatus({ state: 'error' })
                 }
             })

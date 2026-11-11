@@ -31,6 +31,7 @@ export function EditPostPage() {
             )
             .catch((err) => {
                 if (err.name !== 'AbortError') {
+                    console.error(err)
                     setStatus({ state: 'error' })
                 }
             })

@@ -61,9 +61,7 @@ CREATE TABLE posts (
 
 **URLs use slugs, not ids.** `/posts/opening-day` is readable and stays meaningful, while `/posts/4` exposes an internal number. `UNIQUE` guarantees two posts can't share a URL, and Postgres automatically creates an index for unique columns, which makes the detail page's `WHERE slug = $1` lookup fast.
 
-**The database enforces the rules, not just my code.** Every column is `NOT NULL`, and a `CHECK` constraint requires slugs to be lowercase letters, numbers, and single hyphens. I tested both by trying to insert a duplicate slug and a slug like `Bad Slug!`, and Postgres rejected them. Validation in the app can have bugs; constraints are the last line of defense.
-
-**`text`, not `varchar(255)`.** In Postgres they perform the same, and `text` avoids an arbitrary length limit. Reasonable length limits will come from validation in v2.
+**The database enforces the rules, not just my code.** Every column is `NOT NULL`, and a `CHECK` constraint requires slugs to be lowercase letters, numbers, and single hyphens. I tested both by trying to insert a duplicate slug and a slug bad slug, and Postgres rejected them. Validation in the app can have bugs; constraints are the last line of defense.
 
 **`timestamptz` for dates.** It stores an exact moment in time, which avoids the time zone confusion of plain `timestamp`. Time zones still bit me on the display side: my seed dates are midnight UTC, so the browser showed them a day early in Pacific time until I formatted them with `timeZone: 'UTC'`. `DEFAULT now()` only applies on insert, so updates have to set `updated_at = now()` themselves.
 
@@ -72,6 +70,58 @@ CREATE TABLE posts (
 **The list endpoint skips the body.** `GET /api/posts` selects only titles, slugs, and dates. The list page doesn't need full posts, and sending every body would get slower with every post I write.
 
 **Schema changes go through migrations.** The table is created by `migrations/001_create_posts.sql`, applied by a small runner I wrote. It records applied migrations in a `schema_migrations` table and runs each one inside a transaction, so a failure rolls back cleanly. When a typo in the runner's `INSERT` made it fail, the rollback undid the `CREATE TABLE` too, so nothing was left half-applied. Applied migrations never get edited; changes go in new numbered files.
+
+## Validation and error handling
+
+Three layers check every write request.
+
+**1. In the browser, for a good experience.** The post editor validates with `createPostSchema` before sending anything. A blank title or a bad slug gets an instant error under the right field, with no network request. The schema lives in the `shared` package, so the browser and server use identical rules and can't disagree about what's valid. Client checks are only for the user's benefit, though. Anyone can skip the form and send requests with curl, so the server never trusts them.
+
+**2. On the server, for correctness.** Each route runs `safeParse` on the request body. I started with hand written checks, which took a lot of code and still missed things. Zod handles what they didn't:
+
+ - It transforms as well as checks, for example `.trim()` trims whitespace from the ends and fails on a whitespace only title as empty.
+ - It enforces length limits so a user can't send a 300 MB title.
+ - It strips unknown feilds, so an `id` in a request body is ignored.
+
+**3. In the database, last line of defense** The `UNIQUE` and `CHECK` constraints on `slug` duplicate some of Zod's rules so a bug that skips validation still can't save bad data. The database is the only resliable check for uniqueness. Inseting has a race condition though: two requests could both see a slug is free. So the server just inserts and handles the uniqueness violation. Generated slugs use the same idea and on conflict just try `powder-day-1` then `-2` and so on.
+
+### Status codes
+
+| Code | Meaning | Example |
+|---|---|---|
+| 200 | Success, with data | Fetching or updating a post |
+| 201 | Created | Publishing a post, with a `Location` header |
+| 204 | Success, no body | Deleting a post |
+| 400 | The request is invalid | A blank title, or malformed JSON |
+| 403 | Not allowed | Writes in production, until auth exists |
+| 404 | Doesn't exist | An unknown slug or route |
+| 409 | Valid, but conflicts with existing data | A slug I chose that's already taken |
+| 500 | Something broke on the server | An unexpected database error |
+
+The difference between 400 and 409 is the one I had to think about: 400 means the request itself is wrong, while 409 means it's fine but clashes with what's already stored.
+
+### Unexpected errors
+
+Express 5 passes errors from async routes to my error handler. Client errors (4xx), like malformed JSON, get their proper status and a short message. Server errors (5xx) get logged in full on the server, but the client only sees `"Internal server error"`, since stack traces and database details don't belong in responses.
+
+Postgres errors needed one extra step. Drizzle wraps driver errors in its own `DrizzleQueryError` and attaches the original as `cause`, so `pgErrorCode` checks the error and then its causes until it finds a code. Before that fix, every duplicate slug would have been reported as a 500.
+
+### Validating responses too
+
+The client parses API responses with Zod as well, so if the client and server ever disagree about a response's shape, it fails loudly instead of quietly. This caught two real problems: when I deliberately reintroduced my old `"updatedAT"` alias typo, the page showed an error instead of silently getting `undefined`, and when switching to Drizzle changed `id` from a string to a number, the client flagged it immediately.
+
+## Drizzle vs. raw SQL
+
+I wrote every query by hand in v1, then moved them to Drizzle in v2. Comparing Drizzle's logged SQL with mine:
+
+- **Names are quoted and qualified**, like `"posts"."created_at"`. It's noisier, but never ambiguous.
+- **Nearly everything is parameterized**, including `limit`, which shows up as a `$` parameter instead of a literal number.
+- **Inserts list every column**, with `default` for ones I didn't set. Mine listed only the columns I provided. Both behave the same.
+- **Updates change shape per request.** Drizzle leaves out fields that are `undefined`, so editing only the title updates only `title` and `updated_at`. My raw version sent the same SQL every time and used `COALESCE` to keep old values.
+
+The biggest difference is when mistakes get caught. In v1, typos inside SQL strings like `SELSCT` and `"updatedAT"` compiled fine, and the alias one would have failed silently at runtime. In v2, I made the same kind of typo in Drizzle's table definition (`nodyMd`), and TypeScript refused to compile until I fixed it.
+
+I kept raw SQL in two places: my migrations, because I already had a working runner and SQL files, and the `SELECT 1` health check. The tradeoff is that my migrations and Drizzle's table definition both describe the schema, so I keep them in sync by hand.
 
 ## Lessons learned
 
@@ -126,3 +176,21 @@ CREATE TABLE posts (
 **Effects need the right dependencies.** The post page's effect depends on `[slug]`, so navigating from one post to another refetches. With `[]`, the URL would change but the old post would stay on screen.
 
 **Git paths are relative to the current folder.** `git add server ROADMAP.md` failed from inside `server/`, because Git looked for `server/server`. Running Git from the repo root keeps paths predictable.
+
+### v2
+
+**Same name, different type.** Without importing Express's `Response`, TypeScript used the global Fetch API `Response`, where `status` is a number, not a method. The MDN link in the error was the clue. When a type behaves strangely, check which one is actually in scope.
+
+**Rename vs. default in destructuring.** `{ initial: empty }` renames the prop to `empty`, while `{ initial = empty }` gives it a default. One character, completely different meaning.
+
+**A preview isn't a choice.** The editor shows an auto-generated slug as you type, but if it sent that slug, the server would treat it as one I chose, and a duplicate title would get a 409 instead of `-2`. So the form only sends the slug if I edited it myself.
+
+**Libraries can wrap errors.** Drizzle wraps Postgres errors in `DrizzleQueryError` with the original as `cause`, so code that read `err.code` directly stopped seeing it. My helper now checks the whole `cause` chain.
+
+**Narrowing catches inverted logic.** I wrote `typeof err === 'object'` in a guard that needed `!==`. TypeScript flagged the next line, because after my version, only non-objects could reach it. That bug would have turned every 409 into a 500.
+
+**"No overload matches" hides the real cause.** A typo in my Drizzle schema (`nodyMd`) showed up as an error on `title`. TypeScript tried the array version of `values()` and reported the first mismatch there. The actual problem was visible in the expected type, once I read the whole message.
+
+**Middleware can break type inference.** With `requireWritesEnabled` between the path and the handler, Express's types couldn't infer route params anymore, so `req.params.slug` became `string | string[]`. Adding `<{ slug: string }>` to the route declares the params explicitly.
+
+**Catching an error hides it.** My pages' `.catch` set the error state but didn't log anything, so the console was empty when posts failed to load. Now each catch also calls `console.error`, so users get a friendly message and I still get the details.
