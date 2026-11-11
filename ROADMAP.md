@@ -42,13 +42,13 @@ Check items off in the same commit that completes them.
 - [x] Add loading, error, and empty states to every page
 - [x] Generate unique slugs from titles and handle collisions
 - [x] Move queries to Drizzle and compare the generated SQL with your raw SQL
-- [ ] README: write "Validation and error handling"
+- [x] README: write "Validation and error handling"
 
 ## 🟦 v3: Authentication and authorization
 
 **Goal:** Know exactly who is asking and what they're allowed to do. Build this by hand once before reaching for a library.
 
-- [ ] Add a `users` table and hash passwords with bcrypt
+- [x] Add a `users` table and hash passwords with bcrypt
 - [ ] Build sign up, log in, and log out with session cookies (`httpOnly`, `Secure`, `SameSite=Lax`)
 - [ ] Write auth middleware and add `author_id` to posts
 - [ ] Enforce on the server that only the author or an admin can edit or delete a post

@@ -10,3 +10,14 @@ export const posts = pgTable('posts', {
 })
 
 export type PostRow = typeof posts.$inferSelect
+
+export const users = pgTable('users', {
+    id: bigint('id', { mode: 'number'}).primaryKey().generatedAlwaysAsIdentity(),
+    email: text('email').notNull(),
+    displayName: text('display_name').notNull(),
+    passwordHash: text('password_hash').notNull(),
+    role: text('role', { enum: ['author', 'admin'] }).notNull().default('author'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+export type UserRow = typeof users.$inferSelect

@@ -22,6 +22,7 @@
   "license": "ISC",
   "dependencies": {
     "@first-chair/shared": "^0.0.0",
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "drizzle-orm": "^0.45.4",
     "express": "^5.2.1",
